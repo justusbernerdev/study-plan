@@ -17,6 +17,7 @@ import { CourseMenu } from "./course-menu";
 import { MilestoneMenu } from "./milestone-menu";
 import { CourseCard } from "./course-card";
 import { FriendDetailModal } from "./friend-detail-modal";
+import { FriendCard } from "./friend-card";
 import { ProfileSettings } from "./profile-settings";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { LanguageToggle } from "@/components/ui/language-toggle";
@@ -228,15 +229,14 @@ export function MainDashboard() {
                 <ThemeToggle />
               </div>
 
-              <div className="hidden sm:block">
-                <NotificationsPanel
-                  notifications={notifications}
-                  onDismiss={(id) => setNotifications((prev) => prev.filter((n) => n.id !== id))}
-                  onDismissAll={() => setNotifications([])}
-                  notificationsEnabled={notificationsEnabled}
-                  onToggleNotifications={() => setNotificationsEnabled(!notificationsEnabled)}
-                />
-              </div>
+              <NotificationsPanel
+                notifications={notifications}
+                onDismiss={(id) => setNotifications((prev) => prev.filter((n) => n.id !== id))}
+                onDismissAll={() => setNotifications([])}
+                notificationsEnabled={notificationsEnabled}
+                onToggleNotifications={() => setNotificationsEnabled(!notificationsEnabled)}
+                userId={convexUserId || undefined}
+              />
 
               {/* User Menu */}
               <div className="flex items-center gap-1 sm:gap-2 pl-1 sm:pl-3 border-l border-border">
@@ -429,47 +429,15 @@ export function MainDashboard() {
           {friends && friends.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
               {friends.map((friend) => (
-                <Card 
-                  key={friend._id} 
-                  className="card-shadow p-3 sm:p-4 cursor-pointer hover:border-primary/50 hover:shadow-lg transition-all"
-                  onClick={() => {
+                <FriendCard
+                  key={friend._id}
+                  friendId={friend._id}
+                  onOpenDetail={() => {
                     setSelectedFriendId(friend._id);
                     setFriendDetailOpen(true);
                   }}
-                >
-                  <div className="flex items-center gap-3 sm:gap-4">
-                    {friend.imageUrl ? (
-                      <img
-                        src={friend.imageUrl}
-                        alt={friend.name}
-                        className="w-10 h-10 sm:w-12 sm:h-12 rounded-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white font-bold text-sm sm:text-base">
-                        {friend.name.charAt(0).toUpperCase()}
-                      </div>
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium truncate text-sm sm:text-base">{friend.name}</p>
-                      <div className="flex items-center gap-1 text-xs sm:text-sm text-muted-foreground">
-                        <Flame className="w-3 h-3 text-orange-500" />
-                        <span>{friend.currentStreak ?? 0} {t.dayStreak}</span>
-                      </div>
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation(); // Prevent card click
-                        handleSendCheer(friend._id);
-                      }}
-                      className="gap-1 shrink-0 h-7 sm:h-8 text-xs sm:text-sm px-2 sm:px-3"
-                    >
-                      <Heart className="w-3 h-3 sm:w-4 sm:h-4" />
-                      <span className="hidden xs:inline">{t.cheer}</span>
-                    </Button>
-                  </div>
-                </Card>
+                  onSendCheer={() => handleSendCheer(friend._id)}
+                />
               ))}
             </div>
           ) : (

@@ -1,8 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useQuery, useMutation } from "convex/react";
+import { api } from "../../../convex/_generated/api";
+import { Id } from "../../../convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { useLanguage } from "@/lib/language-context";
 import {
   Bell,
   BellOff,
@@ -13,11 +17,12 @@ import {
   Users,
   CheckCircle2,
   Heart,
+  Sparkles,
 } from "lucide-react";
 
-interface Notification {
+interface LocalNotification {
   id: string;
-  type: "daily_goal" | "streak_at_risk" | "milestone_approaching" | "member_completed" | "cheer_received";
+  type: "daily_goal" | "streak_at_risk" | "milestone_approaching" | "member_completed";
   title: string;
   message: string;
   timestamp: number;
@@ -25,11 +30,12 @@ interface Notification {
 }
 
 interface NotificationsProps {
-  notifications: Notification[];
+  notifications: LocalNotification[];
   onDismiss: (id: string) => void;
   onDismissAll: () => void;
   notificationsEnabled: boolean;
   onToggleNotifications: () => void;
+  userId?: Id<"users">;
 }
 
 const iconMap = {
@@ -54,9 +60,44 @@ export function NotificationsPanel({
   onDismissAll,
   notificationsEnabled,
   onToggleNotifications,
+  userId,
 }: NotificationsProps) {
+  const { language } = useLanguage();
   const [isOpen, setIsOpen] = useState(false);
-  const unreadCount = notifications.filter((n) => !n.read).length;
+
+  // Fetch cheers from Convex
+  const cheers = useQuery(
+    api.cheers.getUnread,
+    userId ? { userId } : "skip"
+  );
+  const cheersWithSender = useQuery(
+    api.cheers.getByRecipient,
+    userId ? { userId } : "skip"
+  );
+  const markCheerAsRead = useMutation(api.cheers.markAsRead);
+  const markAllCheersAsRead = useMutation(api.cheers.markAllAsRead);
+
+  // Get sender names for cheers
+  const allUsers = useQuery(api.users.list);
+  
+  const getUserName = (userId: Id<"users">) => {
+    return allUsers?.find(u => u._id === userId)?.name || "Someone";
+  };
+
+  const unreadCheersCount = cheers?.length || 0;
+  const unreadNotificationsCount = notifications.filter((n) => !n.read).length;
+  const totalUnread = unreadCheersCount + unreadNotificationsCount;
+
+  const handleMarkCheerAsRead = async (cheerId: Id<"cheers">) => {
+    await markCheerAsRead({ id: cheerId });
+  };
+
+  const handleClearAll = async () => {
+    onDismissAll();
+    if (userId) {
+      await markAllCheersAsRead({ userId });
+    }
+  };
 
   return (
     <div className="relative">
@@ -71,9 +112,9 @@ export function NotificationsPanel({
         ) : (
           <BellOff className="w-5 h-5 text-muted-foreground" />
         )}
-        {unreadCount > 0 && notificationsEnabled && (
+        {totalUnread > 0 && notificationsEnabled && (
           <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-primary text-xs flex items-center justify-center text-white font-bold">
-            {unreadCount}
+            {totalUnread > 9 ? "9+" : totalUnread}
           </span>
         )}
       </Button>
@@ -82,27 +123,31 @@ export function NotificationsPanel({
         <>
           <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
 
-          <div className="absolute right-0 top-full mt-2 w-80 z-50">
+          <div className="absolute right-0 top-full mt-2 w-80 sm:w-96 z-50">
             <Card className="card-shadow">
-              <div className="p-4 border-b border-border flex items-center justify-between">
-                <h3 className="font-semibold">Notifications</h3>
-                <div className="flex items-center gap-2">
+              <div className="p-3 sm:p-4 border-b border-border flex items-center justify-between">
+                <h3 className="font-semibold text-sm sm:text-base">
+                  {language === "fi" ? "Ilmoitukset" : "Notifications"}
+                </h3>
+                <div className="flex items-center gap-1 sm:gap-2">
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={onToggleNotifications}
-                    className="text-xs"
+                    className="text-xs h-7 px-2"
                   >
-                    {notificationsEnabled ? "Disable" : "Enable"}
+                    {notificationsEnabled 
+                      ? (language === "fi" ? "Pois" : "Off") 
+                      : (language === "fi" ? "Päällä" : "On")}
                   </Button>
-                  {notifications.length > 0 && (
+                  {(notifications.length > 0 || (cheersWithSender && cheersWithSender.length > 0)) && (
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={onDismissAll}
-                      className="text-xs"
+                      onClick={handleClearAll}
+                      className="text-xs h-7 px-2"
                     >
-                      Clear all
+                      {language === "fi" ? "Tyhjennä" : "Clear"}
                     </Button>
                   )}
                 </div>
@@ -112,15 +157,56 @@ export function NotificationsPanel({
                 {!notificationsEnabled ? (
                   <div className="p-6 text-center text-muted-foreground">
                     <BellOff className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                    <p className="text-sm">Notifications are disabled</p>
+                    <p className="text-sm">
+                      {language === "fi" ? "Ilmoitukset pois päältä" : "Notifications disabled"}
+                    </p>
                   </div>
-                ) : notifications.length === 0 ? (
+                ) : (notifications.length === 0 && (!cheersWithSender || cheersWithSender.length === 0)) ? (
                   <div className="p-6 text-center text-muted-foreground">
                     <CheckCircle2 className="w-8 h-8 mx-auto mb-2 text-success" />
-                    <p className="text-sm">All caught up!</p>
+                    <p className="text-sm">
+                      {language === "fi" ? "Ei uusia ilmoituksia!" : "All caught up!"}
+                    </p>
                   </div>
                 ) : (
                   <div className="divide-y divide-border">
+                    {/* Cheers */}
+                    {cheersWithSender?.map((cheer) => (
+                      <div
+                        key={cheer._id}
+                        className={`p-3 sm:p-4 flex gap-3 ${!cheer.read ? "bg-rose-50/50 dark:bg-rose-950/20" : ""}`}
+                      >
+                        <div className="w-8 h-8 rounded-lg bg-rose-100 dark:bg-rose-900/30 flex items-center justify-center flex-shrink-0">
+                          {cheer.emoji ? (
+                            <span className="text-lg">{cheer.emoji}</span>
+                          ) : (
+                            <Heart className="w-4 h-4 text-rose-500" />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-foreground">
+                            {getUserName(cheer.fromUserId)} {language === "fi" ? "kannusti sinua!" : "cheered you!"}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            "{cheer.message}"
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {formatTimeAgo(cheer.timestamp, language)}
+                          </p>
+                        </div>
+                        {!cheer.read && (
+                          <button
+                            onClick={() => handleMarkCheerAsRead(cheer._id)}
+                            className="flex-shrink-0 p-1 rounded hover:bg-muted"
+                            title={language === "fi" ? "Merkitse luetuksi" : "Mark as read"}
+                          >
+                            <CheckCircle2 className="w-4 h-4 text-muted-foreground" />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+
+                    {/* Local notifications */}
                     {notifications.map((notification) => {
                       const Icon = iconMap[notification.type] || Bell;
                       const colorClass = colorMap[notification.type] || colorMap.daily_goal;
@@ -128,7 +214,7 @@ export function NotificationsPanel({
                       return (
                         <div
                           key={notification.id}
-                          className={`p-4 flex gap-3 ${!notification.read ? "bg-primary/5" : ""}`}
+                          className={`p-3 sm:p-4 flex gap-3 ${!notification.read ? "bg-primary/5" : ""}`}
                         >
                           <div
                             className={`w-8 h-8 rounded-lg ${colorClass} flex items-center justify-center flex-shrink-0`}
@@ -143,7 +229,7 @@ export function NotificationsPanel({
                               {notification.message}
                             </p>
                             <p className="text-xs text-muted-foreground mt-1">
-                              {formatTimeAgo(notification.timestamp)}
+                              {formatTimeAgo(notification.timestamp, language)}
                             </p>
                           </div>
                           <button
@@ -166,11 +252,11 @@ export function NotificationsPanel({
   );
 }
 
-function formatTimeAgo(timestamp: number): string {
+function formatTimeAgo(timestamp: number, language: string): string {
   const seconds = Math.floor((Date.now() - timestamp) / 1000);
 
-  if (seconds < 60) return "Just now";
-  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
-  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
-  return `${Math.floor(seconds / 86400)}d ago`;
+  if (seconds < 60) return language === "fi" ? "Juuri nyt" : "Just now";
+  if (seconds < 3600) return `${Math.floor(seconds / 60)}${language === "fi" ? " min sitten" : "m ago"}`;
+  if (seconds < 86400) return `${Math.floor(seconds / 3600)}${language === "fi" ? " t sitten" : "h ago"}`;
+  return `${Math.floor(seconds / 86400)}${language === "fi" ? " pv sitten" : "d ago"}`;
 }
