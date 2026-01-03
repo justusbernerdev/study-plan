@@ -180,6 +180,40 @@ Instead of email invitations, users connect via unique 6-character codes:
 
 Toggle between English and Finnish with the language button in the header. The selection is saved to localStorage.
 
+## Deployment
+
+### Deploy to Vercel
+
+The easiest way to deploy Study Tracker is using Vercel:
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/justusbernerdev/study-plan)
+
+**Steps:**
+
+1. Click the "Deploy with Vercel" button above
+2. Connect your GitHub account
+3. Add environment variables in Vercel dashboard:
+   - `NEXT_PUBLIC_CONVEX_URL`
+   - `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
+   - `CLERK_SECRET_KEY`
+   - `NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in`
+   - `NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up`
+4. Deploy!
+
+### Deploy Convex Backend
+
+1. Install Convex CLI globally:
+   ```bash
+   npm install -g convex
+   ```
+
+2. Deploy to production:
+   ```bash
+   npx convex deploy
+   ```
+
+3. Copy the production URL to your Vercel environment variables
+
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
