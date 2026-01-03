@@ -16,6 +16,7 @@ import { AddCourseModal } from "./add-course-modal";
 import { CourseMenu } from "./course-menu";
 import { MilestoneMenu } from "./milestone-menu";
 import { CourseCard } from "./course-card";
+import { FriendDetailModal } from "./friend-detail-modal";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { LanguageToggle } from "@/components/ui/language-toggle";
 import { useLanguage } from "@/lib/language-context";
@@ -113,6 +114,8 @@ export function MainDashboard() {
   const [selectedCourseId, setSelectedCourseId] = useState<Id<"courses"> | null>(null);
   const [notifications, setNotifications] = useState<any[]>([]);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const [friendDetailOpen, setFriendDetailOpen] = useState(false);
+  const [selectedFriendId, setSelectedFriendId] = useState<Id<"users"> | null>(null);
 
   // Mutations
   const createMilestone = useMutation(api.milestones.create);
@@ -403,7 +406,14 @@ export function MainDashboard() {
           {friends && friends.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {friends.map((friend) => (
-                <Card key={friend._id} className="card-shadow p-4">
+                <Card 
+                  key={friend._id} 
+                  className="card-shadow p-4 cursor-pointer hover:border-primary/50 hover:shadow-lg transition-all"
+                  onClick={() => {
+                    setSelectedFriendId(friend._id);
+                    setFriendDetailOpen(true);
+                  }}
+                >
                   <div className="flex items-center gap-4">
                     {friend.imageUrl ? (
                       <img
@@ -426,7 +436,10 @@ export function MainDashboard() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => handleSendCheer(friend._id)}
+                      onClick={(e) => {
+                        e.stopPropagation(); // Prevent card click
+                        handleSendCheer(friend._id);
+                      }}
                       className="gap-1 shrink-0"
                     >
                       <Heart className="w-4 h-4" />
@@ -504,6 +517,17 @@ export function MainDashboard() {
           isOpen={courseDetailOpen}
           onClose={() => setCourseDetailOpen(false)}
           courseId={selectedCourseId}
+        />
+      )}
+
+      {selectedFriendId && (
+        <FriendDetailModal
+          isOpen={friendDetailOpen}
+          onClose={() => {
+            setFriendDetailOpen(false);
+            setSelectedFriendId(null);
+          }}
+          friendId={selectedFriendId}
         />
       )}
     </div>
