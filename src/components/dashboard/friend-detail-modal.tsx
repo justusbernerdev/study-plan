@@ -25,6 +25,8 @@ import {
   ThumbsUp,
   Star,
   Zap,
+  UserMinus,
+  AlertTriangle,
 } from "lucide-react";
 import { format, differenceInDays, isPast } from "date-fns";
 import { fi, enUS } from "date-fns/locale";
@@ -61,11 +63,14 @@ export function FriendDetailModal({ isOpen, onClose, friendId, currentUserId }: 
   const [customMessage, setCustomMessage] = useState("");
   const [showCheerPanel, setShowCheerPanel] = useState(false);
   const [isSendingCheer, setIsSendingCheer] = useState(false);
+  const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
+  const [isRemoving, setIsRemoving] = useState(false);
 
   const friend = useQuery(api.users.get, { id: friendId });
   const friendMilestones = useQuery(api.milestones.getByUser, { userId: friendId });
   const friendCourses = useQuery(api.courses.getByUser, { userId: friendId });
   const sendCheer = useMutation(api.cheers.send);
+  const removeFriend = useMutation(api.connections.remove);
 
   if (!isOpen) return null;
 
@@ -115,6 +120,33 @@ export function FriendDetailModal({ isOpen, onClose, friendId, currentUserId }: 
     setIsSendingCheer(false);
   };
 
+  const handleRemoveFriend = async () => {
+    setIsRemoving(true);
+    try {
+      await removeFriend({
+        userId: currentUserId,
+        friendId: friendId,
+      });
+
+      toast({
+        title: language === "fi" ? "Kaveri poistettu" : "Friend removed",
+        description: language === "fi" 
+          ? `${friend.name} on poistettu kavereistasi.`
+          : `${friend.name} has been removed from your friends.`,
+      });
+
+      onClose();
+    } catch (error) {
+      toast({
+        title: language === "fi" ? "Virhe" : "Error",
+        description: language === "fi" ? "Kaverin poistaminen epäonnistui" : "Failed to remove friend",
+        variant: "destructive",
+      });
+    }
+    setIsRemoving(false);
+    setShowRemoveConfirm(false);
+  };
+
   const totalCourseProgress = friendCourses?.length || 0;
   const completedMilestones = friendMilestones?.filter(m => m.isCompleted).length || 0;
   const totalMilestones = friendMilestones?.length || 0;
@@ -161,16 +193,71 @@ export function FriendDetailModal({ isOpen, onClose, friendId, currentUserId }: 
                 </Badge>
               </div>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowCheerPanel(!showCheerPanel)}
-              className="gap-2"
-            >
-              <Heart className="w-4 h-4 text-rose-500" />
-              {language === "fi" ? "Kannusta" : "Cheer"}
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowCheerPanel(!showCheerPanel)}
+                className="gap-2"
+              >
+                <Heart className="w-4 h-4 text-rose-500" />
+                {language === "fi" ? "Kannusta" : "Cheer"}
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowRemoveConfirm(true)}
+                className="text-muted-foreground hover:text-destructive"
+                title={language === "fi" ? "Poista kaveri" : "Remove friend"}
+              >
+                <UserMinus className="w-4 h-4" />
+              </Button>
+            </div>
           </div>
+
+          {/* Remove Confirmation */}
+          {showRemoveConfirm && (
+            <div className="mt-4 p-4 rounded-xl bg-destructive/10 border border-destructive/20 animate-in slide-in-from-top-2">
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 rounded-lg bg-destructive/20 flex items-center justify-center shrink-0">
+                  <AlertTriangle className="w-4 h-4 text-destructive" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-destructive">
+                    {language === "fi" ? "Poistetaanko kaveri?" : "Remove friend?"}
+                  </p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {language === "fi" 
+                      ? `Haluatko varmasti poistaa käyttäjän ${friend.name} kavereistasi? Ette enää näe toistenne edistymistä.`
+                      : `Are you sure you want to remove ${friend.name}? You will no longer see each other's progress.`}
+                  </p>
+                  <div className="flex gap-2 mt-3">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowRemoveConfirm(false)}
+                    >
+                      {language === "fi" ? "Peruuta" : "Cancel"}
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={handleRemoveFriend}
+                      disabled={isRemoving}
+                      className="gap-2"
+                    >
+                      {isRemoving ? (
+                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      ) : (
+                        <UserMinus className="w-4 h-4" />
+                      )}
+                      {language === "fi" ? "Poista" : "Remove"}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Cheer Panel */}
           {showCheerPanel && (
