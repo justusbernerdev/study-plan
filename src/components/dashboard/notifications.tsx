@@ -188,7 +188,7 @@ export function NotificationsPanel({
                             {getUserName(cheer.fromUserId)} {language === "fi" ? "kannusti sinua!" : "cheered you!"}
                           </p>
                           <p className="text-sm text-muted-foreground">
-                            "{cheer.message}"
+                            &ldquo;{cheer.message}&rdquo;
                           </p>
                           <p className="text-xs text-muted-foreground mt-1">
                             {formatTimeAgo(cheer.timestamp, language)}
