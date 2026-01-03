@@ -28,12 +28,14 @@ export const send = mutation({
     fromUserId: v.id("users"),
     toUserId: v.id("users"),
     message: v.string(),
+    emoji: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     return await ctx.db.insert("cheers", {
       fromUserId: args.fromUserId,
       toUserId: args.toUserId,
       message: args.message,
+      emoji: args.emoji,
       timestamp: Date.now(),
       read: false,
     });
