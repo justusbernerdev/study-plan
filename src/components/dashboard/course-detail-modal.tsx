@@ -28,7 +28,9 @@ import {
   TrendingUp,
   CheckCircle2,
   Circle,
+  History,
 } from "lucide-react";
+import { PastDaysModal } from "./past-days-modal";
 
 interface CourseDetailModalProps {
   isOpen: boolean;
@@ -92,6 +94,7 @@ export function CourseDetailModal({ isOpen, onClose, courseId }: CourseDetailMod
   const [newCategoryIcon, setNewCategoryIcon] = useState("BookOpen");
   const [newCategoryColor, setNewCategoryColor] = useState("emerald");
   const [activeTab, setActiveTab] = useState<"today" | "overview" | "categories">("today");
+  const [pastDaysModalOpen, setPastDaysModalOpen] = useState(false);
 
   const courseWithCategories = useQuery(api.courses.getWithCategories, { id: courseId });
   const createCategory = useMutation(api.categories.create);
@@ -295,7 +298,7 @@ export function CourseDetailModal({ isOpen, onClose, courseId }: CourseDetailMod
           </div>
 
           {/* Tabs */}
-          <div className="mt-4 flex gap-2">
+          <div className="mt-4 flex gap-2 flex-wrap">
             <Button
               variant={activeTab === "today" ? "default" : "outline"}
               size="sm"
@@ -322,6 +325,15 @@ export function CourseDetailModal({ isOpen, onClose, courseId }: CourseDetailMod
             >
               <ClipboardList className="w-4 h-4" />
               Kategoriat
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPastDaysModalOpen(true)}
+              className="gap-2 ml-auto"
+            >
+              <History className="w-4 h-4" />
+              Aiemmat päivät
             </Button>
           </div>
         </CardHeader>
@@ -659,6 +671,16 @@ export function CourseDetailModal({ isOpen, onClose, courseId }: CourseDetailMod
           )}
         </CardContent>
       </Card>
+
+      {/* Past Days Modal */}
+      {courseWithCategories?.userId && (
+        <PastDaysModal
+          isOpen={pastDaysModalOpen}
+          onClose={() => setPastDaysModalOpen(false)}
+          courseId={courseId}
+          userId={courseWithCategories.userId}
+        />
+      )}
     </div>
   );
 }

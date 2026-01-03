@@ -12,6 +12,7 @@ import type * as categories from "../categories.js";
 import type * as cheers from "../cheers.js";
 import type * as connections from "../connections.js";
 import type * as courses from "../courses.js";
+import type * as dailyEntries from "../dailyEntries.js";
 import type * as invitations from "../invitations.js";
 import type * as migrations from "../migrations.js";
 import type * as milestones from "../milestones.js";
@@ -30,6 +31,7 @@ declare const fullApi: ApiFromModules<{
   cheers: typeof cheers;
   connections: typeof connections;
   courses: typeof courses;
+  dailyEntries: typeof dailyEntries;
   invitations: typeof invitations;
   migrations: typeof migrations;
   milestones: typeof milestones;

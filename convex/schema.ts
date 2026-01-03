@@ -109,6 +109,22 @@ export default defineSchema({
     .index("by_course", ["courseId"])
     .index("by_date", ["date"]),
 
+  // Daily entries - track completed items per category per day
+  dailyEntries: defineTable({
+    categoryId: v.id("categories"),
+    courseId: v.id("courses"),
+    userId: v.id("users"),
+    date: v.string(), // YYYY-MM-DD format
+    completed: v.number(), // How many items completed on this day
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_category", ["categoryId"])
+    .index("by_course", ["courseId"])
+    .index("by_user", ["userId"])
+    .index("by_date", ["date"])
+    .index("by_category_and_date", ["categoryId", "date"]),
+
   // Cheers - social encouragement
   cheers: defineTable({
     fromUserId: v.id("users"),
