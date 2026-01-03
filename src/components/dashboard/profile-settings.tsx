@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { Id } from "../../../convex/_generated/dataModel";
@@ -16,6 +16,8 @@ import {
   Save,
   Link,
   Check,
+  Upload,
+  Loader2,
 } from "lucide-react";
 
 interface ProfileSettingsProps {
@@ -38,9 +40,13 @@ export function ProfileSettings({
   const [lastName, setLastName] = useState(currentName.split(" ").slice(1).join(" ") || "");
   const [imageUrl, setImageUrl] = useState(currentImageUrl || "");
   const [isSaving, setIsSaving] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const [saved, setSaved] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const updateProfile = useMutation(api.users.updateProfile);
+  const updateProfileImage = useMutation(api.users.updateProfileImage);
+  const generateUploadUrl = useMutation(api.storage.generateUploadUrl);
 
   // Reset form when modal opens
   useEffect(() => {
@@ -55,6 +61,84 @@ export function ProfileSettings({
   if (!isOpen) return null;
 
   const fullName = `${firstName} ${lastName}`.trim();
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith("image/")) {
+      toast({
+        title: language === "fi" ? "Virhe" : "Error",
+        description: language === "fi" 
+          ? "Valitse kuvatiedosto (jpg, png, gif, webp)" 
+          : "Please select an image file (jpg, png, gif, webp)",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: language === "fi" ? "Virhe" : "Error",
+        description: language === "fi" 
+          ? "Kuva on liian suuri (max 5MB)" 
+          : "Image is too large (max 5MB)",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      // Get upload URL from Convex
+      const uploadUrl = await generateUploadUrl();
+
+      // Upload the file
+      const result = await fetch(uploadUrl, {
+        method: "POST",
+        headers: { "Content-Type": file.type },
+        body: file,
+      });
+
+      if (!result.ok) {
+        throw new Error("Upload failed");
+      }
+
+      const { storageId } = await result.json();
+
+      // Update the user's profile image using the storage ID
+      const newImageUrl = await updateProfileImage({
+        id: userId,
+        storageId: storageId,
+      });
+      
+      setImageUrl(newImageUrl);
+      
+      toast({
+        title: language === "fi" ? "Ladattu!" : "Uploaded!",
+        description: language === "fi" 
+          ? "Kuva ladattiin onnistuneesti" 
+          : "Image uploaded successfully",
+      });
+    } catch (error) {
+      console.error("Upload error:", error);
+      toast({
+        title: language === "fi" ? "Virhe" : "Error",
+        description: language === "fi" 
+          ? "Kuvan lataus epäonnistui" 
+          : "Failed to upload image",
+        variant: "destructive",
+      });
+    }
+    setIsUploading(false);
+    
+    // Reset file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
 
   const handleSave = async () => {
     if (!firstName.trim()) {
@@ -130,27 +214,57 @@ export function ProfileSettings({
         </CardHeader>
 
         <CardContent className="p-6 space-y-6">
-          {/* Profile Picture Preview */}
+          {/* Profile Picture Preview with Upload */}
           <div className="flex flex-col items-center gap-3">
-            <div className="relative">
+            <div className="relative group">
               {imageUrl ? (
                 <img
                   src={imageUrl}
                   alt={fullName}
-                  className="w-20 h-20 rounded-full ring-4 ring-primary/20 object-cover"
+                  className="w-24 h-24 rounded-full ring-4 ring-primary/20 object-cover"
                   onError={(e) => {
+                    (e.target as HTMLImageElement).src = "";
                     (e.target as HTMLImageElement).style.display = "none";
                   }}
                 />
               ) : (
-                <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white font-bold text-2xl ring-4 ring-primary/20">
+                <div className="w-24 h-24 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white font-bold text-3xl ring-4 ring-primary/20">
                   {firstName.charAt(0).toUpperCase() || "?"}
                 </div>
               )}
-              <div className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-primary flex items-center justify-center">
-                <Camera className="w-3.5 h-3.5 text-white" />
+              
+              {/* Upload overlay */}
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isUploading}
+                className="absolute inset-0 rounded-full bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer"
+              >
+                {isUploading ? (
+                  <Loader2 className="w-6 h-6 text-white animate-spin" />
+                ) : (
+                  <Camera className="w-6 h-6 text-white" />
+                )}
+              </button>
+              
+              <div className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-primary flex items-center justify-center shadow-lg">
+                <Camera className="w-4 h-4 text-white" />
               </div>
             </div>
+            
+            {/* Hidden file input */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleFileUpload}
+              className="hidden"
+            />
+            
+            <p className="text-xs text-muted-foreground">
+              {language === "fi" 
+                ? "Klikkaa kuvaa ladataksesi uusi" 
+                : "Click the image to upload a new one"}
+            </p>
           </div>
 
           {/* Name Inputs */}
@@ -185,11 +299,11 @@ export function ProfileSettings({
             </div>
           </div>
 
-          {/* Image URL Input */}
+          {/* Image URL Input (alternative to upload) */}
           <div className="space-y-2">
             <label className="text-sm font-medium flex items-center gap-2">
               <Link className="w-4 h-4 text-muted-foreground" />
-              {language === "fi" ? "Profiilikuvan URL" : "Profile Picture URL"}
+              {language === "fi" ? "Tai syötä kuvan URL" : "Or enter image URL"}
             </label>
             <Input
               type="url"
@@ -201,11 +315,6 @@ export function ProfileSettings({
               placeholder="https://example.com/your-photo.jpg"
               className="w-full"
             />
-            <p className="text-xs text-muted-foreground">
-              {language === "fi" 
-                ? "Syötä kuvan URL-osoite (esim. Gravatar, Imgur)" 
-                : "Enter an image URL (e.g., Gravatar, Imgur)"}
-            </p>
           </div>
 
           {/* Quick Options */}
@@ -213,19 +322,23 @@ export function ProfileSettings({
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setImageUrl("")}
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isUploading}
+              className="gap-2"
             >
-              {language === "fi" ? "Poista kuva" : "Remove image"}
+              {isUploading ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Upload className="w-4 h-4" />
+              )}
+              {language === "fi" ? "Lataa kuva" : "Upload image"}
             </Button>
             <Button
               variant="outline"
               size="sm"
-              onClick={() => {
-                const gravatarUrl = `https://www.gravatar.com/avatar/${fullName.toLowerCase().replace(/\s/g, "")}?d=identicon&s=200`;
-                setImageUrl(gravatarUrl);
-              }}
+              onClick={() => setImageUrl("")}
             >
-              Gravatar
+              {language === "fi" ? "Poista kuva" : "Remove image"}
             </Button>
           </div>
 
@@ -237,7 +350,7 @@ export function ProfileSettings({
           >
             {isSaving ? (
               <>
-                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                <Loader2 className="w-4 h-4 animate-spin" />
                 {language === "fi" ? "Tallennetaan..." : "Saving..."}
               </>
             ) : saved ? (

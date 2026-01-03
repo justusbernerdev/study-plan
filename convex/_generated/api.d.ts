@@ -17,6 +17,7 @@ import type * as invitations from "../invitations.js";
 import type * as migrations from "../migrations.js";
 import type * as milestones from "../milestones.js";
 import type * as seed from "../seed.js";
+import type * as storage from "../storage.js";
 import type * as studyLogs from "../studyLogs.js";
 import type * as users from "../users.js";
 
@@ -36,6 +37,7 @@ declare const fullApi: ApiFromModules<{
   migrations: typeof migrations;
   milestones: typeof milestones;
   seed: typeof seed;
+  storage: typeof storage;
   studyLogs: typeof studyLogs;
   users: typeof users;
 }>;

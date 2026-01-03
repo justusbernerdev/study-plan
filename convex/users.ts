@@ -174,19 +174,49 @@ export const updateProfile = mutation({
     id: v.id("users"),
     name: v.optional(v.string()),
     imageUrl: v.optional(v.string()),
+    imageStorageId: v.optional(v.id("_storage")),
   },
   handler: async (ctx, args) => {
-    const updates: any = {
+    const updates: Record<string, unknown> = {
       onboardingComplete: true,
     };
     
     if (args.name) {
       updates.name = args.name;
     }
-    if (args.imageUrl !== undefined) {
+    
+    // If a storageId is provided, get the URL from storage
+    if (args.imageStorageId) {
+      const url = await ctx.storage.getUrl(args.imageStorageId);
+      if (url) {
+        updates.imageUrl = url;
+        updates.imageStorageId = args.imageStorageId;
+      }
+    } else if (args.imageUrl !== undefined) {
       updates.imageUrl = args.imageUrl;
     }
     
     await ctx.db.patch(args.id, updates);
+  },
+});
+
+// Update profile with uploaded image
+export const updateProfileImage = mutation({
+  args: {
+    id: v.id("users"),
+    storageId: v.id("_storage"),
+  },
+  handler: async (ctx, args) => {
+    const url = await ctx.storage.getUrl(args.storageId);
+    if (!url) {
+      throw new Error("Could not get URL for uploaded image");
+    }
+    
+    await ctx.db.patch(args.id, {
+      imageUrl: url,
+      imageStorageId: args.storageId,
+    });
+    
+    return url;
   },
 });

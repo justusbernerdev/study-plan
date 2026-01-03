@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { Id } from "../../../convex/_generated/dataModel";
@@ -16,6 +16,8 @@ import {
   ArrowRight,
   Check,
   Link,
+  Upload,
+  Loader2,
 } from "lucide-react";
 
 interface WelcomeModalProps {
@@ -39,12 +41,94 @@ export function WelcomeModal({
   const [lastName, setLastName] = useState(initialName.split(" ").slice(1).join(" ") || "");
   const [imageUrl, setImageUrl] = useState(initialImageUrl || "");
   const [isSaving, setIsSaving] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const updateProfile = useMutation(api.users.updateProfile);
+  const updateProfileImage = useMutation(api.users.updateProfileImage);
+  const generateUploadUrl = useMutation(api.storage.generateUploadUrl);
 
   if (!isOpen) return null;
 
   const fullName = `${firstName} ${lastName}`.trim();
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith("image/")) {
+      toast({
+        title: language === "fi" ? "Virhe" : "Error",
+        description: language === "fi" 
+          ? "Valitse kuvatiedosto (jpg, png, gif, webp)" 
+          : "Please select an image file (jpg, png, gif, webp)",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: language === "fi" ? "Virhe" : "Error",
+        description: language === "fi" 
+          ? "Kuva on liian suuri (max 5MB)" 
+          : "Image is too large (max 5MB)",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      // Get upload URL from Convex
+      const uploadUrl = await generateUploadUrl();
+
+      // Upload the file
+      const result = await fetch(uploadUrl, {
+        method: "POST",
+        headers: { "Content-Type": file.type },
+        body: file,
+      });
+
+      if (!result.ok) {
+        throw new Error("Upload failed");
+      }
+
+      const { storageId } = await result.json();
+
+      // Update the user's profile image using the storage ID
+      const newImageUrl = await updateProfileImage({
+        id: userId,
+        storageId: storageId,
+      });
+      
+      setImageUrl(newImageUrl);
+      
+      toast({
+        title: language === "fi" ? "Ladattu!" : "Uploaded!",
+        description: language === "fi" 
+          ? "Kuva ladattiin onnistuneesti" 
+          : "Image uploaded successfully",
+      });
+    } catch (error) {
+      console.error("Upload error:", error);
+      toast({
+        title: language === "fi" ? "Virhe" : "Error",
+        description: language === "fi" 
+          ? "Kuvan lataus epäonnistui" 
+          : "Failed to upload image",
+        variant: "destructive",
+      });
+    }
+    setIsUploading(false);
+    
+    // Reset file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
 
   const handleSave = async () => {
     if (!firstName.trim()) {
@@ -155,32 +239,88 @@ export function WelcomeModal({
             </>
           ) : (
             <>
-              {/* Profile picture */}
+              {/* Profile picture with upload */}
               <div className="flex flex-col items-center gap-4">
-                <div className="relative">
+                <div className="relative group">
                   {imageUrl ? (
                     <img
                       src={imageUrl}
                       alt={fullName}
-                      className="w-24 h-24 rounded-full ring-4 ring-primary/20 object-cover"
+                      className="w-28 h-28 rounded-full ring-4 ring-primary/20 object-cover"
                       onError={() => setImageUrl("")}
                     />
                   ) : (
-                    <div className="w-24 h-24 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white font-bold text-3xl ring-4 ring-primary/20">
+                    <div className="w-28 h-28 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white font-bold text-4xl ring-4 ring-primary/20">
                       {firstName.charAt(0).toUpperCase()}
                     </div>
                   )}
-                  <div className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-primary flex items-center justify-center">
-                    <Camera className="w-4 h-4 text-white" />
+                  
+                  {/* Upload overlay */}
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isUploading}
+                    className="absolute inset-0 rounded-full bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer"
+                  >
+                    {isUploading ? (
+                      <Loader2 className="w-8 h-8 text-white animate-spin" />
+                    ) : (
+                      <Camera className="w-8 h-8 text-white" />
+                    )}
+                  </button>
+                  
+                  <div className="absolute -bottom-1 -right-1 w-9 h-9 rounded-full bg-primary flex items-center justify-center shadow-lg">
+                    <Camera className="w-5 h-5 text-white" />
                   </div>
                 </div>
+                
+                {/* Hidden file input */}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                />
+                
                 <p className="font-semibold text-lg">{fullName}</p>
+                <p className="text-xs text-muted-foreground text-center">
+                  {language === "fi" 
+                    ? "Klikkaa kuvaa ladataksesi oma kuva" 
+                    : "Click the image to upload your photo"}
+                </p>
+              </div>
+
+              {/* Upload button */}
+              <Button
+                variant="outline"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isUploading}
+                className="w-full gap-2"
+              >
+                {isUploading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Upload className="w-4 h-4" />
+                )}
+                {language === "fi" ? "Lataa kuva tietokoneelta" : "Upload image from computer"}
+              </Button>
+
+              {/* Or use URL */}
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t border-border" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-card px-2 text-muted-foreground">
+                    {language === "fi" ? "tai" : "or"}
+                  </span>
+                </div>
               </div>
 
               <div className="space-y-2">
                 <label className="text-sm font-medium flex items-center gap-2">
                   <Link className="w-4 h-4 text-muted-foreground" />
-                  {language === "fi" ? "Kuvan URL (valinnainen)" : "Image URL (optional)"}
+                  {language === "fi" ? "Kuvan URL" : "Image URL"}
                 </label>
                 <Input
                   type="url"
@@ -188,11 +328,6 @@ export function WelcomeModal({
                   onChange={(e) => setImageUrl(e.target.value)}
                   placeholder="https://..."
                 />
-                <p className="text-xs text-muted-foreground">
-                  {language === "fi" 
-                    ? "Voit lisätä kuvan myöhemmin asetuksista"
-                    : "You can add an image later in settings"}
-                </p>
               </div>
 
               <div className="flex gap-3">
@@ -209,7 +344,7 @@ export function WelcomeModal({
                   className="flex-1 gap-2 bg-gradient-to-r from-primary to-accent hover:opacity-90 text-white"
                 >
                   {isSaving ? (
-                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    <Loader2 className="w-4 h-4 animate-spin" />
                   ) : (
                     <Check className="w-4 h-4" />
                   )}
@@ -223,4 +358,3 @@ export function WelcomeModal({
     </div>
   );
 }
-

@@ -7,6 +7,7 @@ export default defineSchema({
     name: v.string(),
     email: v.optional(v.string()),
     imageUrl: v.optional(v.string()),
+    imageStorageId: v.optional(v.id("_storage")), // Convex storage ID for uploaded images
     clerkId: v.optional(v.string()),
     studyCode: v.optional(v.string()), // Unique code for friend connections
     emoji: v.optional(v.string()), // Legacy field
