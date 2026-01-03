@@ -15,6 +15,7 @@ export default defineSchema({
     currentStreak: v.optional(v.number()),
     longestStreak: v.optional(v.number()),
     lastCompletedDate: v.optional(v.string()),
+    onboardingComplete: v.optional(v.boolean()), // Has user completed onboarding?
   })
     .index("by_clerk_id", ["clerkId"])
     .index("by_email", ["email"])

@@ -19,6 +19,7 @@ import { CourseCard } from "./course-card";
 import { FriendDetailModal } from "./friend-detail-modal";
 import { FriendCard } from "./friend-card";
 import { ProfileSettings } from "./profile-settings";
+import { WelcomeModal } from "./welcome-modal";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { LanguageToggle } from "@/components/ui/language-toggle";
 import { useLanguage } from "@/lib/language-context";
@@ -119,6 +120,14 @@ export function MainDashboard() {
   const [friendDetailOpen, setFriendDetailOpen] = useState(false);
   const [selectedFriendId, setSelectedFriendId] = useState<Id<"users"> | null>(null);
   const [profileSettingsOpen, setProfileSettingsOpen] = useState(false);
+  const [welcomeModalOpen, setWelcomeModalOpen] = useState(false);
+
+  // Show welcome modal for new users who haven't completed onboarding
+  useEffect(() => {
+    if (currentUser && !currentUser.onboardingComplete) {
+      setWelcomeModalOpen(true);
+    }
+  }, [currentUser]);
 
   // Mutations
   const createMilestone = useMutation(api.milestones.create);
@@ -530,6 +539,16 @@ export function MainDashboard() {
           userId={convexUserId}
           currentImageUrl={currentUser.imageUrl}
           currentName={currentUser.name}
+        />
+      )}
+
+      {convexUserId && currentUser && (
+        <WelcomeModal
+          isOpen={welcomeModalOpen}
+          onClose={() => setWelcomeModalOpen(false)}
+          userId={convexUserId}
+          initialName={currentUser.name}
+          initialImageUrl={currentUser.imageUrl}
         />
       )}
     </div>

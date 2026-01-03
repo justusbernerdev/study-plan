@@ -167,3 +167,26 @@ export const updateStreak = mutation({
     }
   },
 });
+
+// Update user profile (name, image, onboarding complete)
+export const updateProfile = mutation({
+  args: {
+    id: v.id("users"),
+    name: v.optional(v.string()),
+    imageUrl: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const updates: any = {
+      onboardingComplete: true,
+    };
+    
+    if (args.name) {
+      updates.name = args.name;
+    }
+    if (args.imageUrl !== undefined) {
+      updates.imageUrl = args.imageUrl;
+    }
+    
+    await ctx.db.patch(args.id, updates);
+  },
+});
