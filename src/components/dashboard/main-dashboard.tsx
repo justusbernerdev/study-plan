@@ -65,7 +65,7 @@ const colorMap: Record<string, string> = {
 };
 
 export function MainDashboard() {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const { user: clerkUser, isLoaded: isClerkLoaded } = useUser();
 
   // Get or create user in Convex
@@ -204,32 +204,42 @@ export function MainDashboard() {
   return (
     <div className="min-h-screen pattern-bg">
       {/* Header */}
-      <header className="sticky top-0 z-40 bg-card/80 backdrop-blur-md border-b border-border">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
+      <header className="sticky top-0 z-40 bg-card/80 backdrop-blur-md border-b border-border safe-area-bottom">
+        <div className="container mx-auto px-3 sm:px-4 py-2 sm:py-4">
+          <div className="flex items-center justify-between gap-2">
             {/* Logo */}
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center">
-                <BookOpen className="w-5 h-5 text-white" />
+            <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center">
+                <BookOpen className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
               </div>
-              <h1 className="text-xl font-bold gradient-text">{t.appName}</h1>
+              <h1 className="text-base sm:text-xl font-bold gradient-text hidden xs:block">{t.appName}</h1>
             </div>
 
             {/* Actions */}
-            <div className="flex items-center gap-3">
-              <LanguageToggle />
-              <ThemeToggle />
+            <div className="flex items-center gap-1 sm:gap-3">
+              <div className="hidden sm:flex items-center gap-2">
+                <LanguageToggle />
+                <ThemeToggle />
+              </div>
+              
+              {/* Mobile: Only show essential toggles */}
+              <div className="flex sm:hidden items-center gap-1">
+                <LanguageToggle />
+                <ThemeToggle />
+              </div>
 
-              <NotificationsPanel
-                notifications={notifications}
-                onDismiss={(id) => setNotifications((prev) => prev.filter((n) => n.id !== id))}
-                onDismissAll={() => setNotifications([])}
-                notificationsEnabled={notificationsEnabled}
-                onToggleNotifications={() => setNotificationsEnabled(!notificationsEnabled)}
-              />
+              <div className="hidden sm:block">
+                <NotificationsPanel
+                  notifications={notifications}
+                  onDismiss={(id) => setNotifications((prev) => prev.filter((n) => n.id !== id))}
+                  onDismissAll={() => setNotifications([])}
+                  notificationsEnabled={notificationsEnabled}
+                  onToggleNotifications={() => setNotificationsEnabled(!notificationsEnabled)}
+                />
+              </div>
 
               {/* User Menu */}
-              <div className="flex items-center gap-2 pl-3 border-l border-border">
+              <div className="flex items-center gap-1 sm:gap-2 pl-1 sm:pl-3 border-l border-border">
                 <button
                   onClick={() => setProfileSettingsOpen(true)}
                   className="relative group cursor-pointer"
@@ -239,10 +249,10 @@ export function MainDashboard() {
                     <img
                       src={currentUser?.imageUrl || clerkUser.imageUrl}
                       alt={clerkUser.fullName || "User"}
-                      className="w-8 h-8 rounded-full ring-2 ring-transparent group-hover:ring-primary transition-all object-cover"
+                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-full ring-2 ring-transparent group-hover:ring-primary transition-all object-cover"
                     />
                   ) : (
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white font-bold text-sm ring-2 ring-transparent group-hover:ring-primary/50 transition-all">
+                    <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white font-bold text-xs sm:text-sm ring-2 ring-transparent group-hover:ring-primary/50 transition-all">
                       {(clerkUser.fullName || clerkUser.firstName || "U").charAt(0).toUpperCase()}
                     </div>
                   )}
@@ -250,11 +260,11 @@ export function MainDashboard() {
                     <span className="text-[8px] text-white">✎</span>
                   </div>
                 </button>
-                <span className="hidden sm:inline text-sm font-medium">
+                <span className="hidden md:inline text-sm font-medium max-w-[100px] truncate">
                   {clerkUser.fullName || clerkUser.firstName}
                 </span>
                 <SignOutButton>
-                  <Button variant="ghost" size="icon" title={t.signOut}>
+                  <Button variant="ghost" size="icon" className="w-8 h-8 sm:w-9 sm:h-9" title={t.signOut}>
                     <LogOut className="w-4 h-4" />
                   </Button>
                 </SignOutButton>
@@ -265,20 +275,20 @@ export function MainDashboard() {
       </header>
 
       {/* Main Content */}
-      <main className="container mx-auto px-4 py-8 space-y-8">
-        {/* Milestone Selector */}
+      <main className="container mx-auto px-3 sm:px-4 py-4 sm:py-8 space-y-4 sm:space-y-8">
+        {/* Milestone Selector - Scrollable on mobile */}
         {milestones && milestones.length > 0 && (
-          <div className="flex items-center gap-4 flex-wrap">
-            <span className="text-sm text-muted-foreground">{t.goals}:</span>
+          <div className="flex items-center gap-2 sm:gap-4 overflow-x-auto pb-2 -mx-1 px-1 hide-scrollbar">
+            <span className="text-xs sm:text-sm text-muted-foreground shrink-0">{t.goals}:</span>
             {milestones.map((milestone) => (
-              <div key={milestone._id} className="flex items-center">
+              <div key={milestone._id} className="flex items-center shrink-0">
                 <Button
                   variant={selectedMilestoneId === milestone._id ? "default" : "outline"}
                   size="sm"
                   onClick={() => setSelectedMilestoneId(milestone._id)}
-                  className="gap-2 pr-1"
+                  className="gap-1 sm:gap-2 pr-1 text-xs sm:text-sm h-8 sm:h-9"
                 >
-                  {milestone.title}
+                  <span className="max-w-[100px] sm:max-w-none truncate">{milestone.title}</span>
                   <MilestoneMenu
                     milestoneId={milestone._id}
                     milestoneTitle={milestone.title}
@@ -299,10 +309,10 @@ export function MainDashboard() {
               variant="ghost"
               size="sm"
               onClick={() => setNewGoalFormOpen(true)}
-              className="gap-1"
+              className="gap-1 shrink-0 text-xs sm:text-sm h-8 sm:h-9"
             >
               <Plus className="w-4 h-4" />
-              {t.addGoal}
+              <span className="hidden xs:inline">{t.addGoal}</span>
             </Button>
           </div>
         )}
@@ -310,7 +320,7 @@ export function MainDashboard() {
         {/* Empty state - no milestones */}
         {(!milestones || milestones.length === 0) && (
           <Card className="card-shadow">
-            <CardContent className="p-12 text-center">
+            <CardContent className="p-6 sm:p-12 text-center">
               <div className="w-16 h-16 mx-auto bg-gradient-to-br from-primary/10 to-accent/10 rounded-2xl flex items-center justify-center mb-4">
                 <Plus className="w-8 h-8 text-primary" />
               </div>
@@ -347,22 +357,23 @@ export function MainDashboard() {
 
         {/* Courses Section */}
         {selectedMilestoneId && (
-          <div className="space-y-6">
+          <div className="space-y-4 sm:space-y-6">
             <div className="flex items-center justify-between">
-              <h2 className="text-2xl font-bold text-foreground">{t.courses}</h2>
+              <h2 className="text-lg sm:text-2xl font-bold text-foreground">{t.courses}</h2>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setAddCourseOpen(true)}
-                className="gap-2"
+                className="gap-1 sm:gap-2 text-xs sm:text-sm h-8 sm:h-9"
               >
-                <Plus className="w-4 h-4" />
-                {t.addCourse}
+                <Plus className="w-3 h-3 sm:w-4 sm:h-4" />
+                <span className="hidden xs:inline">{t.addCourse}</span>
+                <span className="xs:hidden">{language === "fi" ? "Lisää" : "Add"}</span>
               </Button>
             </div>
 
             {milestoneCourses.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                 {milestoneCourses.map((course, index) => (
                   <div
                     key={course._id}
@@ -378,15 +389,15 @@ export function MainDashboard() {
               </div>
             ) : (
               <Card className="card-shadow">
-                <CardContent className="p-8 text-center">
-                  <div className="w-12 h-12 mx-auto bg-muted rounded-full flex items-center justify-center mb-4">
-                    <Plus className="w-6 h-6 text-muted-foreground" />
+                <CardContent className="p-6 sm:p-8 text-center">
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 mx-auto bg-muted rounded-full flex items-center justify-center mb-3 sm:mb-4">
+                    <Plus className="w-5 h-5 sm:w-6 sm:h-6 text-muted-foreground" />
                   </div>
-                  <h3 className="text-lg font-medium mb-2">{t.noCourses}</h3>
-                  <p className="text-muted-foreground text-sm mb-4">
+                  <h3 className="text-base sm:text-lg font-medium mb-2">{t.noCourses}</h3>
+                  <p className="text-muted-foreground text-xs sm:text-sm mb-4">
                     {t.noCoursesDesc}
                   </p>
-                  <Button onClick={() => setAddCourseOpen(true)} className="gap-2">
+                  <Button onClick={() => setAddCourseOpen(true)} className="gap-2 text-sm">
                     <Plus className="w-4 h-4" />
                     {t.addFirstCourse}
                   </Button>
@@ -397,49 +408,50 @@ export function MainDashboard() {
         )}
 
         {/* Study Partners Section */}
-        <div className="space-y-4">
+        <div className="space-y-3 sm:space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Users className="w-5 h-5 text-primary" />
-              <h2 className="text-xl font-bold text-foreground">{t.studyPartners}</h2>
+              <Users className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
+              <h2 className="text-base sm:text-xl font-bold text-foreground">{t.studyPartners}</h2>
             </div>
             <Button
               variant="outline"
               size="sm"
               onClick={() => setInviteFriendOpen(true)}
-              className="gap-2"
+              className="gap-1 sm:gap-2 text-xs sm:text-sm h-8 sm:h-9"
             >
-              <UserPlus className="w-4 h-4" />
-              {t.inviteFriend}
+              <UserPlus className="w-3 h-3 sm:w-4 sm:h-4" />
+              <span className="hidden xs:inline">{t.inviteFriend}</span>
+              <span className="xs:hidden">{language === "fi" ? "Lisää" : "Add"}</span>
             </Button>
           </div>
 
           {friends && friends.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
               {friends.map((friend) => (
                 <Card 
                   key={friend._id} 
-                  className="card-shadow p-4 cursor-pointer hover:border-primary/50 hover:shadow-lg transition-all"
+                  className="card-shadow p-3 sm:p-4 cursor-pointer hover:border-primary/50 hover:shadow-lg transition-all"
                   onClick={() => {
                     setSelectedFriendId(friend._id);
                     setFriendDetailOpen(true);
                   }}
                 >
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-3 sm:gap-4">
                     {friend.imageUrl ? (
                       <img
                         src={friend.imageUrl}
                         alt={friend.name}
-                        className="w-12 h-12 rounded-full"
+                        className="w-10 h-10 sm:w-12 sm:h-12 rounded-full object-cover"
                       />
                     ) : (
-                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white font-bold">
+                      <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white font-bold text-sm sm:text-base">
                         {friend.name.charAt(0).toUpperCase()}
                       </div>
                     )}
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium truncate">{friend.name}</p>
-                      <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                      <p className="font-medium truncate text-sm sm:text-base">{friend.name}</p>
+                      <div className="flex items-center gap-1 text-xs sm:text-sm text-muted-foreground">
                         <Flame className="w-3 h-3 text-orange-500" />
                         <span>{friend.currentStreak ?? 0} {t.dayStreak}</span>
                       </div>
@@ -451,10 +463,10 @@ export function MainDashboard() {
                         e.stopPropagation(); // Prevent card click
                         handleSendCheer(friend._id);
                       }}
-                      className="gap-1 shrink-0"
+                      className="gap-1 shrink-0 h-7 sm:h-8 text-xs sm:text-sm px-2 sm:px-3"
                     >
-                      <Heart className="w-4 h-4" />
-                      {t.cheer}
+                      <Heart className="w-3 h-3 sm:w-4 sm:h-4" />
+                      <span className="hidden xs:inline">{t.cheer}</span>
                     </Button>
                   </div>
                 </Card>
