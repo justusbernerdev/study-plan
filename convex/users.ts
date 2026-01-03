@@ -200,11 +200,12 @@ export const updateProfile = mutation({
   },
 });
 
-// Update profile with uploaded image
+// Update profile with uploaded image (and optionally name)
 export const updateProfileImage = mutation({
   args: {
     id: v.id("users"),
     storageId: v.id("_storage"),
+    name: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const url = await ctx.storage.getUrl(args.storageId);
@@ -212,10 +213,17 @@ export const updateProfileImage = mutation({
       throw new Error("Could not get URL for uploaded image");
     }
     
-    await ctx.db.patch(args.id, {
+    const updates: Record<string, unknown> = {
       imageUrl: url,
       imageStorageId: args.storageId,
-    });
+    };
+    
+    // Also update name if provided
+    if (args.name && args.name.trim()) {
+      updates.name = args.name.trim();
+    }
+    
+    await ctx.db.patch(args.id, updates);
     
     return url;
   },

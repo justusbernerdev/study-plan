@@ -98,10 +98,11 @@ export function WelcomeModal({
 
       const { storageId } = await result.json();
 
-      // Update the user's profile image using the storage ID
+      // Update the user's profile image AND name using the storage ID
       const newImageUrl = await updateProfileImage({
         id: userId,
         storageId: storageId,
+        name: fullName, // Also save the current name
       });
       
       setImageUrl(newImageUrl);
