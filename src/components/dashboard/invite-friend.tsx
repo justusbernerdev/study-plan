@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { Id } from "../../../convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "@/components/ui/toaster";
 import {
   X,
@@ -15,6 +16,8 @@ import {
   Users,
   Hash,
   ArrowRight,
+  Flame,
+  User,
 } from "lucide-react";
 import { useLanguage } from "@/lib/language-context";
 
@@ -25,7 +28,7 @@ interface InviteFriendProps {
 }
 
 export function InviteFriend({ isOpen, onClose, userId }: InviteFriendProps) {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [friendCode, setFriendCode] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -33,6 +36,12 @@ export function InviteFriend({ isOpen, onClose, userId }: InviteFriendProps) {
 
   const currentUser = useQuery(api.users.get, { id: userId });
   const connectByCode = useMutation(api.connections.connectByStudyCode);
+  
+  // Preview friend when code is 6 characters
+  const friendPreview = useQuery(
+    api.users.previewByStudyCode,
+    friendCode.length === 6 ? { studyCode: friendCode } : "skip"
+  );
 
   // Clear error when code changes
   const handleCodeChange = (value: string) => {
@@ -41,6 +50,8 @@ export function InviteFriend({ isOpen, onClose, userId }: InviteFriendProps) {
   };
 
   if (!isOpen) return null;
+
+  const isOwnCode = currentUser?.studyCode && friendCode.toUpperCase() === currentUser.studyCode;
 
   const handleCopyCode = () => {
     if (currentUser?.studyCode) {
@@ -186,12 +197,12 @@ export function InviteFriend({ isOpen, onClose, userId }: InviteFriendProps) {
                 placeholder="ABCD12"
                 maxLength={6}
                 className={`flex-1 p-4 rounded-xl border bg-background text-foreground font-mono text-xl font-bold tracking-widest uppercase text-center placeholder:text-muted-foreground placeholder:font-normal focus:outline-none focus:ring-2 ${
-                  error ? "border-destructive focus:ring-destructive" : "border-border focus:ring-primary"
+                  error || isOwnCode ? "border-destructive focus:ring-destructive" : friendPreview ? "border-green-500 focus:ring-green-500" : "border-border focus:ring-primary"
                 }`}
               />
               <Button
                 type="submit"
-                disabled={isSubmitting || friendCode.length < 6}
+                disabled={isSubmitting || friendCode.length < 6 || !friendPreview || !!isOwnCode}
                 size="lg"
                 className="gap-2 bg-gradient-to-r from-primary to-accent hover:opacity-90 text-white px-6"
               >
@@ -205,8 +216,54 @@ export function InviteFriend({ isOpen, onClose, userId }: InviteFriendProps) {
                 )}
               </Button>
             </div>
+
+            {/* Friend Preview */}
+            {friendCode.length === 6 && !isOwnCode && friendPreview && (
+              <div className="p-4 rounded-xl bg-green-500/10 border border-green-500/20 animate-in fade-in slide-in-from-top-2">
+                <div className="flex items-center gap-3">
+                  {friendPreview.imageUrl ? (
+                    <img
+                      src={friendPreview.imageUrl}
+                      alt={friendPreview.name}
+                      className="w-12 h-12 rounded-full ring-2 ring-green-500/30"
+                    />
+                  ) : (
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center text-white font-bold text-lg ring-2 ring-green-500/30">
+                      {friendPreview.name.charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                  <div className="flex-1">
+                    <p className="font-semibold text-foreground">{friendPreview.name}</p>
+                    <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                      <Flame className="w-3 h-3 text-orange-500" />
+                      <span>{friendPreview.currentStreak} {t.dayStreak}</span>
+                    </div>
+                  </div>
+                  <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500/30">
+                    <Check className="w-3 h-3 mr-1" />
+                    {language === "fi" ? "Löydetty" : "Found"}
+                  </Badge>
+                </div>
+              </div>
+            )}
+
+            {/* No user found */}
+            {friendCode.length === 6 && !isOwnCode && friendPreview === null && (
+              <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-600 text-sm flex items-center gap-2">
+                <User className="w-4 h-4" />
+                {t.codeNotFound}
+              </div>
+            )}
+
+            {/* Own code warning */}
+            {isOwnCode && (
+              <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm">
+                {t.cantAddYourself}
+              </div>
+            )}
+
             {/* Error message */}
-            {error && (
+            {error && !isOwnCode && (
               <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm">
                 {error}
               </div>

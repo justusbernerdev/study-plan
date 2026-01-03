@@ -91,6 +91,39 @@ export const getByStudyCode = query({
   },
 });
 
+// Preview user by study code (for showing info before adding)
+export const previewByStudyCode = query({
+  args: { studyCode: v.string() },
+  handler: async (ctx, args) => {
+    if (args.studyCode.length !== 6) return null;
+    
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_study_code", (q) => q.eq("studyCode", args.studyCode.toUpperCase()))
+      .first();
+    
+    if (!user) return null;
+    
+    return {
+      _id: user._id,
+      name: user.name,
+      imageUrl: user.imageUrl,
+      currentStreak: user.currentStreak || 0,
+    };
+  },
+});
+
+// Update profile picture
+export const updateProfilePicture = mutation({
+  args: {
+    id: v.id("users"),
+    imageUrl: v.string(),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.id, { imageUrl: args.imageUrl });
+  },
+});
+
 export const updateLastActive = mutation({
   args: { id: v.id("users") },
   handler: async (ctx, args) => {

@@ -17,6 +17,7 @@ import { CourseMenu } from "./course-menu";
 import { MilestoneMenu } from "./milestone-menu";
 import { CourseCard } from "./course-card";
 import { FriendDetailModal } from "./friend-detail-modal";
+import { ProfileSettings } from "./profile-settings";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { LanguageToggle } from "@/components/ui/language-toggle";
 import { useLanguage } from "@/lib/language-context";
@@ -116,6 +117,7 @@ export function MainDashboard() {
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [friendDetailOpen, setFriendDetailOpen] = useState(false);
   const [selectedFriendId, setSelectedFriendId] = useState<Id<"users"> | null>(null);
+  const [profileSettingsOpen, setProfileSettingsOpen] = useState(false);
 
   // Mutations
   const createMilestone = useMutation(api.milestones.create);
@@ -228,17 +230,26 @@ export function MainDashboard() {
 
               {/* User Menu */}
               <div className="flex items-center gap-2 pl-3 border-l border-border">
-                {clerkUser.imageUrl ? (
-                  <img
-                    src={clerkUser.imageUrl}
-                    alt={clerkUser.fullName || "User"}
-                    className="w-8 h-8 rounded-full"
-                  />
-                ) : (
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white font-bold text-sm">
-                    {(clerkUser.fullName || clerkUser.firstName || "U").charAt(0).toUpperCase()}
+                <button
+                  onClick={() => setProfileSettingsOpen(true)}
+                  className="relative group cursor-pointer"
+                  title={language === "fi" ? "Muokkaa profiilia" : "Edit profile"}
+                >
+                  {currentUser?.imageUrl || clerkUser.imageUrl ? (
+                    <img
+                      src={currentUser?.imageUrl || clerkUser.imageUrl}
+                      alt={clerkUser.fullName || "User"}
+                      className="w-8 h-8 rounded-full ring-2 ring-transparent group-hover:ring-primary transition-all object-cover"
+                    />
+                  ) : (
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white font-bold text-sm ring-2 ring-transparent group-hover:ring-primary/50 transition-all">
+                      {(clerkUser.fullName || clerkUser.firstName || "U").charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                  <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-primary/80 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <span className="text-[8px] text-white">✎</span>
                   </div>
-                )}
+                </button>
                 <span className="hidden sm:inline text-sm font-medium">
                   {clerkUser.fullName || clerkUser.firstName}
                 </span>
@@ -520,7 +531,7 @@ export function MainDashboard() {
         />
       )}
 
-      {selectedFriendId && (
+      {selectedFriendId && convexUserId && (
         <FriendDetailModal
           isOpen={friendDetailOpen}
           onClose={() => {
@@ -528,6 +539,17 @@ export function MainDashboard() {
             setSelectedFriendId(null);
           }}
           friendId={selectedFriendId}
+          currentUserId={convexUserId}
+        />
+      )}
+
+      {convexUserId && currentUser && (
+        <ProfileSettings
+          isOpen={profileSettingsOpen}
+          onClose={() => setProfileSettingsOpen(false)}
+          userId={convexUserId}
+          currentImageUrl={currentUser.imageUrl}
+          currentName={currentUser.name}
         />
       )}
     </div>
